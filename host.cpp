@@ -12,6 +12,12 @@
 #include <vector>
 using namespace std;
 
+#define COST_REQ 0.8
+#define LUT_RATIO 1.2
+#define BRAM_RATIO 1.2
+#define DSP_RATIO 1.2
+
+
 #define TRIAL_NUM 2000000
 #define MAX_ROW 7
 double e=1e-16,at=0.99999999,T=1;
@@ -49,18 +55,46 @@ struct res_range{ //
     int start, end;
 };
 
+struct connect{ //
+	string src, dest;
+	int i;
+};
+
+
 
 class HiPR{
 public:
 	vector<tile> tiles;
 	vector<func> functions;
+	vector<connect> connects;
 	res_per_tile num_per_tile = {432, 22, 22};
-	double lut_ratio = 2;
-	double bram18_ratio = 1.1;
-	double dsp2_ratio = 1.2;
+	double lut_ratio = LUT_RATIO;
+	double bram18_ratio = BRAM_RATIO;
+	double dsp2_ratio = DSP_RATIO;
 
-	void init_tiles(char *file_in){
-		freopen(file_in, "r", stdin);
+	void init_connect(string file_in){
+		char file_in_name[file_in.size()+1];
+		file_in_name[file_in.size()] =  0;
+		for(int i=0; i<file_in.size(); i++){ file_in_name[i] = file_in[i]; }
+		freopen(file_in_name, "r", stdin);
+		int n;
+		cin >> n;
+		tiles.clear();
+
+		for (int i = 0; i < n; i++) {
+			connect t;
+			cin >> t.src >> t.dest;
+			t.i=i;
+			connects.push_back(t);
+		}
+		fclose(stdin);
+	}
+
+	void init_tiles(string file_in){
+		char file_in_name[file_in.size()+1];
+		file_in_name[file_in.size()] =  0;
+		for(int i=0; i<file_in.size(); i++){ file_in_name[i] = file_in[i]; }
+		freopen(file_in_name, "r", stdin);
 		int n;
 		cin >> n;
 		tiles.clear();
@@ -74,8 +108,12 @@ public:
 		fclose(stdin);
 	}
 
-	void init_pr(char *file_in){
-		freopen(file_in, "r", stdin);
+	void init_pr(string file_in){
+		char file_in_name[file_in.size()+1];
+		for(int i=0; i<file_in.size(); i++){ file_in_name[i] = file_in[i]; }
+		file_in_name[file_in.size()] = 0;
+		cout << file_in_name << endl;
+		freopen(file_in_name, "r", stdin);
 		int n;
 		cin >> n;
 		tiles.clear();
@@ -106,6 +144,32 @@ public:
 	}
 
 
+	double return_total_dest(void){
+		double x1, y1;
+		double x2, y2;
+		double out = 0;
+		for(int i=0; i<connects.size(); i++){
+			for(int j=0; j<functions.size(); j++){
+				if(functions[j].name == connects[i].src){
+					x1 = functions[j].row;
+					y1 = functions[j].start;
+					//cout << connects[i].src << ": " << x1 << ", " << y1 << endl;
+				}
+				if(functions[j].name == connects[i].dest){
+					x2 = functions[j].row;
+					y2 = functions[j].start;
+					//cout << connects[i].dest  << ": " << x2 << ", " << y2 << endl;
+				}
+
+			}
+
+			out += (x1-x2)*(x1-x2)+(y1-y2)*(y1-y2);
+		}
+
+		out = out/connects.size();
+		//cout << "out = " << out << endl;
+		return out;
+	}
 
 
 	tile_range find_tile_range(int start_tile, int start_row, func op, bool debug=false){
@@ -218,8 +282,8 @@ public:
 	}
 
 
-	int cost_function(bool debug=false){
-		int cost = 0;
+	double cost_function(bool debug=false){
+		double cost = 0;
 		vector <double> cost_table[7];
 		for (int i=0; i<7; i++){
 			for (int j=0; j<tiles.size(); j++){
@@ -258,7 +322,7 @@ public:
 
 
 
-		cost = overlap+invalid_area;
+		cost = overlap+invalid_area + this->return_total_dest()*0.001;
 		if(debug) cout << "overlay = " << overlap << " invalid_area=" << invalid_area << endl;
 		return cost;
 	}
@@ -266,8 +330,8 @@ public:
 	void SimulatedAnnealing(bool debug=false){
 		vector<func> functions_backup;
 		double accept = 0;
-		int cost_min = 100000000;
-		int cost;
+		double cost_min = 100000000;
+		double cost;
 		this->floorplan();
 		cost_min = this->cost_function();
 		if(debug) cout << "init_cost = " << this->cost_function() << endl;
@@ -302,13 +366,14 @@ public:
 				swap(functions[func_index1], functions[func_index2]);
 			}
 			if(debug) cout << "cost = " << cost;
-			if(debug) cout << " cost_min = " << cost_min << endl;
+			cout << " cost_min = " << cost_min << endl;
 
 			if(debug) this->print_seq();
-			if(cost_min == 0) break;
+			if(cost_min < COST_REQ) break;
 			T*=at;  // temperature decrease
 			if(T<e) break;  //Exit when temperature is small enough
 		}
+
 
 		cout << " cost_min = " << cost_min << endl;
 		cout << "accept ratio = " << accept/TRIAL_NUM << endl;
@@ -387,6 +452,11 @@ public:
 		}
 	}
 
+	void print_connects(void){
+		for(int i=0; i<connects.size(); i++){
+			cout << connects[i].i << ": " << connects[i].src << "=>" << connects[i].dest << endl;
+		}
+	}
 	void print_seq(void){
 		for(int i=0; i<functions.size(); i++){ cout << functions[i].i << " "; }
 		cout << endl;
@@ -396,45 +466,32 @@ public:
 
 int main(int argc, char**argv) {
 
+	string res_req_path;
+	string connect_path;
+	string arch_path;
+
+	if(argc > 1){
+		string path_prefix =  argv[1];
+		res_req_path = path_prefix+"/resource.txt";
+		connect_path = path_prefix+"/connection.txt";
+		arch_path    = path_prefix+"/in.txt";
+	}else{
+		res_req_path = "./src/resource.txt";
+		connect_path = "./src/connection.txt";
+		arch_path    = "./src/in.txt";
+	}
 	HiPR pr_inst;
-	pr_inst.init_pr("src/resource.txt");
-	pr_inst.init_tiles("src/in.txt");
+	pr_inst.init_pr(res_req_path);
+	pr_inst.init_connect(connect_path);
+	pr_inst.init_tiles(arch_path);
 	pr_inst.SimulatedAnnealing();
-	//pr_inst.print_tiles();
+
 	pr_inst.print_PRs();
+	//pr_inst.print_connects();
+	//pr_inst.print_tiles();
+	pr_inst.return_total_dest();
 	pr_inst.gen_xdc("src/floorplan.xdc");
     cout << "done" << endl;
     return 0;
 }
 
-
-int main1(int argc, char**argv) {
-
-	HiPR pr_inst;
-	pr_inst.init_pr("src/resource.txt");
-	pr_inst.init_tiles("src/in.txt");
-
-	pr_inst.print_PRs();
-
-	cout << endl << endl;
-	pr_inst.SimulatedAnnealing();
-	pr_inst.print_PRs();
-
-	cout << endl << endl;
-	swap(pr_inst.functions[0], pr_inst.functions[1]);
-	pr_inst.SimulatedAnnealing();
-	pr_inst.print_PRs();
-
-
-
-
-
-	cout << endl << endl;
-
-
-
-
-	//pr_inst.gen_xdc("src/floorplan.xdc");
-    cout << "done" << endl;
-    return 0;
-}

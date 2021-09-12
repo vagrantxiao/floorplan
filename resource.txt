@@ -1,21 +1,7 @@
-20
-fp_conv                       	HW	21	4525	4411	22	0
-bd_gen_8                      	HW	16	1235	782	70	0
-bc1_gen_0                     	HW	3	1151	556	83	0
-bin_dense_wrapper             	HW	20	3244	2058	9	2
-bc1_gen_2                     	HW	5	1375	761	30	0
-bin_conv_2                    	HW	19	10086	7067	25	0
-bin_conv_1                    	HW	18	10449	7163	25	1
-bin_conv_0                    	HW	17	12683	8125	25	1
-bd_gen_0                      	HW	8	1222	580	85	0
-bd_gen_1                      	HW	9	1317	771	94	0
-bd_gen_2                      	HW	10	1307	773	80	0
-bd_gen_3                      	HW	11	1394	796	92	0
-bd_gen_4                      	HW	12	1234	748	74	0
-bd_gen_5                      	HW	13	1241	749	78	0
-bd_gen_6                      	HW	14	1311	772	90	0
-bd_gen_7                      	HW	15	1239	752	72	0
-bc0_gen_0                     	HW	2	1269	606	53	0
-bc1_gen_1                     	HW	4	1173	723	38	0
-bc2_gen_0                     	HW	6	1150	560	81	0
-bc2_gen_1                     	HW	7	1281	768	42	0
+6
+coloringFB_top_m              	HW	22	320	409	16	0
+zculling_bot                  	HW	18	808	494	16	0
+rasterization2_m              	HW	19	2687	2243	0	12
+zculling_top                  	HW	17	808	494	16	0
+data_redir_m                  	HW	21	819	639	0	3
+coloringFB_bot_m              	HW	23	276	296	16	0
