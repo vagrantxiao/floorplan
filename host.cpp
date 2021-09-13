@@ -13,7 +13,7 @@
 using namespace std;
 
 #define COST_REQ 0.8
-#define LUT_RATIO 1.2
+#define LUT_RATIO 4
 #define BRAM_RATIO 1.2
 #define DSP_RATIO 1.2
 
@@ -429,6 +429,10 @@ public:
 				cout << "resize_pblock [get_pblocks " << functions[i].name << "] -add {RAMB36_X";
 				cout << out.start << "Y" << 13+functions[i].row*12 << ":RAMB36_X" << out.end << "Y" << 23+functions[i].row*12 << "}" << endl;
 			}
+			cout << "set_property SNAPPING_MODE ON [get_pblocks " << functions[i].name << "]" << endl;
+			cout << "set_property IS_SOFT TRUE [get_pblocks " << functions[i].name << "]" << endl;
+			cout << "add_cells_to_pblock [get_pblocks " << functions[i].name;
+			cout << "] [get_cells -quiet [list level0_i/ulp/ydma_1/inst/top_inst/" << functions[i].name << "_inst]]" << endl;
 		}
 		fclose(stdout);
 	}
@@ -491,6 +495,7 @@ int main(int argc, char**argv) {
 	//pr_inst.print_tiles();
 	pr_inst.return_total_dest();
 	pr_inst.gen_xdc("src/floorplan.xdc");
+	//pr_inst.gen_xdc("/home/ylxiao/ws_211/PR_vitis/rendering/hw_dfx_manual/xdc/sub.xdc");
     cout << "done" << endl;
     return 0;
 }
