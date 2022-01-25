@@ -9,7 +9,7 @@ hipr::hipr(string path_prefix){
 	pragma_path     = path_prefix + "/pragma.txt";
 	dfx_path        = path_prefix + "/dfx.txt";
 	connect_path    = path_prefix + "/connect.txt";
-	tile_path       = path_prefix + "/tile.txt";
+	tile_path       = "./src/arch/au50.txt";
 	xdc_path        = path_prefix + "/sub.xdc";
 }
 
