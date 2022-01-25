@@ -66,9 +66,10 @@ void hipr::init_dfx(void){
 		t.bram18 *= pragmas[i].bram18;
 		t.dsp2   *= pragmas[i].dsp2;
 		t.i=i++;
-		t.row = 0;
-		t.start = 0;
-		t.end = 0;
+		t.row = rand()%MAX_ROW;
+		t.start = rand()%tiles.size();
+		t.end = t.start;
+		this->find_tile_range(t);
 		dfxs.push_back(t);
 	}
 	myfile.close();
@@ -184,6 +185,7 @@ void hipr::print_tile(void){
 
 void hipr::print_dfx(void){
 	cout << "\n\n============ dfx" << endl;
+	cout << "#: operator          LUTs   FFs    BRAM18 DSP    row start end " << endl;
 	for(uint i=0; i<dfxs.size(); i++){
 		cout << dfxs[i].i << ": " << std::left << std::setw (18);
 		cout << dfxs[i].name;
@@ -191,8 +193,8 @@ void hipr::print_dfx(void){
 		cout << std::setw (7) << dfxs[i].ff;
 		cout << std::setw (7) << dfxs[i].bram18;
 		cout << std::setw (7) << dfxs[i].dsp2;
-		cout << ": " << std::setw (4) << dfxs[i].row;
-		cout << std::setw (4) << dfxs[i].start;
+		cout << std::setw (4) << dfxs[i].row;
+		cout << std::setw (6) << dfxs[i].start;
 		cout << std::setw (4) << dfxs[i].end << endl;
 	}
 	cout << "============ end of dfx\n\n" << endl;
@@ -204,36 +206,18 @@ void hipr::print_seq(void){
 }
 
 void hipr::floorplan(void){
-	tile_range out;
-	int start_tile = 0;
-	int start_row = 0;
-
 	for(uint i=0; i<dfxs.size(); i++){
-		out = find_tile_range(start_tile, start_row, dfxs[i]);
-
-		start_row = out.row;
-		dfxs[i].row   = out.row;
-		dfxs[i].start = out.start;
-		dfxs[i].end   = out.end;
-		if(out.end+2 < tiles.size()){
-			start_tile =  out.end+2; // reserve 1 more tile to map Relay Station
-		}else{
-			if(out.row+1 <MAX_ROW){
-				start_row = out.row+1;
-			}else{
-				start_row = 0;
-			}
-			start_tile =  0;
-		}
+		this->find_tile_range(dfxs[i]);
 	}
 }
 
-tile_range hipr::find_tile_range(uint start_tile, uint start_row, dfx op, bool debug){
+void hipr::find_tile_range(dfx & op, bool debug){
 	tile_range out;
 	dfx still_need;
 	if(debug) cout << "\n======================" << op.name << endl;
-	out.start = start_tile;
-
+	out.start = op.start;
+	uint start_tile = op.start;
+	uint start_row  = op.row;
 	still_need = op;
 	int offset = 0;
 	while(still_need.lut > 0 || still_need.bram18>0 || still_need.dsp2>0){
@@ -291,7 +275,9 @@ tile_range hipr::find_tile_range(uint start_tile, uint start_row, dfx op, bool d
 	}else{
 		out.end = start_tile+offset;
 	}
-	return out;
+	op.start = out.start;
+	op.end   = out.end;
+	op.row   = out.row;
 }
 
 double hipr::return_total_dest(void){
@@ -300,17 +286,29 @@ double hipr::return_total_dest(void){
 	double out = 0;
 	for(uint i=0; i<connects.size(); i++){
 		for(uint j=0; j<dfxs.size(); j++){
-			if(dfxs[j].name == connects[i].src){
-				x1 = dfxs[j].row;
-				y1 = dfxs[j].start;
-			}
-			if(dfxs[j].name == connects[i].dest){
-				x2 = dfxs[j].row;
-				y2 = dfxs[j].start;
+			if(dfxs[j].name == connects[i].src || "DMA" == connects[i].src){
+				x1 = dfxs[j].start;
+				y1 = dfxs[j].row;
+
 			}
 
+			if(dfxs[j].name == connects[i].dest){
+				x2 = dfxs[j].start;
+				y2 = dfxs[j].row;
+			}
+			if("DMA" == connects[i].src){
+				x1 = 0;
+				y1 = 0;
+				out += 3*(W_HORIZONTAL*((x1-x2)*(x1-x2))+W_VERTICAL*((y1-y2)*(y1-y2)));
+			}else if("DMA" == connects[i].dest){
+				x2 = 0;
+				y2 = 0;
+				out += 3*(W_HORIZONTAL*((x1-x2)*(x1-x2))+W_VERTICAL*((y1-y2)*(y1-y2)));
+			}else{
+				out += W_HORIZONTAL*((x1-x2)*(x1-x2))+W_VERTICAL*((y1-y2)*(y1-y2));
+			}
 		}
-		out += (x1-x2)*(x1-x2)+(y1-y2)*(y1-y2);
+
 	}
 
 	out = out/connects.size();
@@ -360,7 +358,7 @@ double hipr::cost_function(bool debug){
 
 
 
-	cost = overlap+invalid_area + this->return_total_dest()*0.001;
+	cost = overlap+invalid_area + this->return_total_dest()*W_DEST;
 	if(debug) cout << "overlay = " << overlap << " invalid_area=" << invalid_area << endl;
 	return cost;
 }
@@ -377,10 +375,12 @@ void hipr::SimulatedAnnealing(bool debug){
 	while(L--){
 		if(L%1000==0) cout << "L = " << L << endl;
 		int func_index1 = rand()%dfxs.size();
-		int func_index2 = rand()%dfxs.size();
 
-		if(func_index1 == func_index2) continue;
-		else                           swap(dfxs[func_index1], dfxs[func_index2]);
+		dfx op_backup = dfxs[func_index1];
+
+		dfxs[func_index1].row   = rand()%MAX_ROW;
+		dfxs[func_index1].start = rand()%tiles.size();
+		this->find_tile_range(dfxs[func_index1]);
 
 		if(debug) cout << "L = " << L << ": ";
 		this->floorplan();
@@ -397,7 +397,7 @@ void hipr::SimulatedAnnealing(bool debug){
 			cost_min = cost;
 			accept++;
 		} else {
-			swap(dfxs[func_index1], dfxs[func_index2]);
+			dfxs[func_index1] = op_backup;
 		}
 		if(debug) cout << "cost = " << cost;
 		cout << " cost_min = " << cost_min << endl;

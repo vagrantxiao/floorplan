@@ -14,10 +14,10 @@ using namespace std;
 #define SUCCESS   0
 #define FAIL      1
 
-#define COST_REQ 0.8
-#define LUT_RATIO 1
-#define BRAM_RATIO 1
-#define DSP_RATIO 1
+#define W_VERTICAL   1000
+#define W_HORIZONTAL 1
+#define W_DEST       0.00014
+#define COST_REQ     1
 
 
 

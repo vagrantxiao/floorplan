@@ -28,7 +28,7 @@ public:
 
 	double return_total_dest(void);
 	double cost_function(bool debug=false);
-	tile_range find_tile_range(uint start_tile, uint start_row, dfx op, bool debug=false);
+	void find_tile_range(dfx & op, bool debug=false);
 	res_range find_resource_range(string res_type, int start_tile, int end_tile);
 	void floorplan(void);
 	void SimulatedAnnealing(bool debug=false);
