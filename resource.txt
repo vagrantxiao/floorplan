@@ -1,7 +1,0 @@
-6
-coloringFB_top_m              	HW	22	320	409	16	0
-zculling_bot                  	HW	18	808	494	16	0
-rasterization2_m              	HW	19	2687	2243	0	12
-zculling_top                  	HW	17	808	494	16	0
-data_redir_m                  	HW	21	819	639	0	3
-coloringFB_bot_m              	HW	23	276	296	16	0

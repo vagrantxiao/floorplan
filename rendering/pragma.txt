@@ -1,0 +1,8 @@
+coloringFB_bot_m              	4	1	2.4	1.2
+coloringFB_top_m              	4	1	2.4	1.2
+data_redir_m                  	4	1	2.4	1.2
+data_transfer                 	4	1	2.4	1.2
+rasterization2_m              	4	1	2.4	1.2
+zculling_bot                  	4	1	2.4	1.2
+zculling_top                  	4	1	2.4	1.2
+
