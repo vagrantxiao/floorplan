@@ -6,11 +6,17 @@ int L = TRIAL_NUM;
 
 
 hipr::hipr(string path_prefix, string device_name){
-	pragma_path     = path_prefix + "/pragma.txt";
-	dfx_path        = path_prefix + "/dfx.txt";
-	connect_path    = path_prefix + "/connect.txt";
-	tile_path       = "./src/arch/"+device_name+".txt";
-	xdc_path        = path_prefix + "/sub.xdc";
+	pragma_path       = path_prefix + "/pragma.txt";
+	dfx_path          = path_prefix + "/dfx.txt";
+	connect_path      = path_prefix + "/connect.txt";
+	tile_path         = "./src/arch/"+device_name+".txt";
+	invalid_tile_path = "./src/arch/"+device_name+"_invalid.txt";
+	xdc_path          = path_prefix + "/sub.xdc";
+	this->init_pragma();
+	this->init_connect();
+	this->init_tile();
+	this->init_dfx();
+	this->init_invalid();
 }
 
 
@@ -75,6 +81,23 @@ void hipr::init_dfx(void){
 	myfile.close();
 }
 
+void hipr::init_invalid(void){
+	const char *cstr = invalid_tile_path.c_str();
+	ifstream myfile;
+	myfile.open(cstr);
+	invalid_tile t;
+
+	// reand in the CLB BRAM36 BRAM18 DSP2 Y-offset for xdc generation
+	myfile >> t.name >> CLB_OFFSET >> BRAM36_OFFSET >> BRAM18_OFFSET >> DSP2_OFFSET;
+
+	// reand in the invalid tiles
+	while(myfile >> t.name >> t.col_start >> t.col_end >> t.row_start >> t.row_end){
+		if(t.name == "CLB")    invalid_clb_tiles.push_back(t);
+		if(t.name == "BRAM18") invalid_bram18_tiles.push_back(t);
+		if(t.name == "DSP2")   invalid_dsp2_tiles.push_back(t);
+	}
+	myfile.close();
+}
 
 res_range hipr::find_resource_range(string res_type, int start_tile, int end_tile){
 	res_range out;
@@ -102,42 +125,42 @@ void hipr::gen_xdc(void){
 		out = find_resource_range("CLB", dfxs[i].start, dfxs[i].end);
 		if (out.valid){
 			myfile << "resize_pblock [get_pblocks " << dfxs[i].name << "] -add {SLICE_X";
-			myfile << out.start << "Y" << 65+dfxs[i].row*60 << ":SLICE_X" << out.end << "Y" << 119+dfxs[i].row*60 << "}" << endl;
+			myfile << out.start << "Y" << 65+dfxs[i].row*60 << ":SLICE_X" << out.end << "Y" << this->CLB_OFFSET+dfxs[i].row*60 << "}" << endl;
 		}
 
 		out = find_resource_range("EMPTY_CLB", dfxs[i].start, dfxs[i].end);
 		if (out.valid){
 			myfile << "resize_pblock [get_pblocks " << dfxs[i].name << "] -add {SLICE_X";
-			myfile << out.start << "Y" << 65+dfxs[i].row*60 << ":SLICE_X" << out.end << "Y" << 119+dfxs[i].row*60 << "}" << endl;
+			myfile << out.start << "Y" << 65+dfxs[i].row*60 << ":SLICE_X" << out.end << "Y" << this->CLB_OFFSET+dfxs[i].row*60 << "}" << endl;
 		}
 
 		out = find_resource_range("DSP2", dfxs[i].start, dfxs[i].end);
 		if (out.valid){
 			myfile << "resize_pblock [get_pblocks " << dfxs[i].name << "] -add {DSP48E2_X";
-			myfile << out.start << "Y" << 20+dfxs[i].row*24 << ":DSP48E2_X" << out.end << "Y" << 41+dfxs[i].row*24 << "}" << endl;
+			myfile << out.start << "Y" << 20+dfxs[i].row*24 << ":DSP48E2_X" << out.end << "Y" << this->DSP2_OFFSET+dfxs[i].row*24 << "}" << endl;
 		}
 
 		out = find_resource_range("EMPTY_DSP2", dfxs[i].start, dfxs[i].end);
 		if (out.valid){
 			myfile << "resize_pblock [get_pblocks " << dfxs[i].name << "] -add {DSP48E2_X";
-			myfile << out.start << "Y" << 20+dfxs[i].row*24 << ":DSP48E2_X" << out.end << "Y" << 41+dfxs[i].row*24 << "}" << endl;
+			myfile << out.start << "Y" << 20+dfxs[i].row*24 << ":DSP48E2_X" << out.end << "Y" << this->DSP2_OFFSET+dfxs[i].row*24 << "}" << endl;
 		}
 
 
 		out = find_resource_range("BRAM18", dfxs[i].start, dfxs[i].end);
 		if (out.valid) {
 			myfile << "resize_pblock [get_pblocks " << dfxs[i].name << "] -add {RAMB18_X";
-			myfile << out.start << "Y" << 26+dfxs[i].row*24 << ":RAMB18_X" << out.end << "Y" << 47+dfxs[i].row*24 << "}" << endl;
+			myfile << out.start << "Y" << 26+dfxs[i].row*24 << ":RAMB18_X" << out.end << "Y" << this->BRAM18_OFFSET+dfxs[i].row*24 << "}" << endl;
 			myfile << "resize_pblock [get_pblocks " << dfxs[i].name << "] -add {RAMB36_X";
-			myfile << out.start << "Y" << 13+dfxs[i].row*12 << ":RAMB36_X" << out.end << "Y" << 23+dfxs[i].row*12 << "}" << endl;
+			myfile << out.start << "Y" << 13+dfxs[i].row*12 << ":RAMB36_X" << out.end << "Y" << this->BRAM36_OFFSET+dfxs[i].row*12 << "}" << endl;
 		}
 
 		out = find_resource_range("EMPTY_BRAM18", dfxs[i].start, dfxs[i].end);
 		if (out.valid) {
 			myfile << "resize_pblock [get_pblocks " << dfxs[i].name << "] -add {RAMB18_X";
-			myfile << out.start << "Y" << 26+dfxs[i].row*24 << ":RAMB18_X" << out.end << "Y" << 47+dfxs[i].row*24 << "}" << endl;
+			myfile << out.start << "Y" << 26+dfxs[i].row*24 << ":RAMB18_X" << out.end << "Y" << this->BRAM18_OFFSET+dfxs[i].row*24 << "}" << endl;
 			myfile << "resize_pblock [get_pblocks " << dfxs[i].name << "] -add {RAMB36_X";
-			myfile << out.start << "Y" << 13+dfxs[i].row*12 << ":RAMB36_X" << out.end << "Y" << 23+dfxs[i].row*12 << "}" << endl;
+			myfile << out.start << "Y" << 13+dfxs[i].row*12 << ":RAMB36_X" << out.end << "Y" << this->BRAM36_OFFSET+dfxs[i].row*12 << "}" << endl;
 		}
 		myfile << "set_property SNAPPING_MODE ON [get_pblocks " << dfxs[i].name << "]" << endl;
 		myfile << "set_property IS_SOFT TRUE [get_pblocks " << dfxs[i].name << "]" << endl;
@@ -200,6 +223,37 @@ void hipr::print_dfx(void){
 	cout << "============ end of dfx\n\n" << endl;
 }
 
+void hipr::print_invalid(void){
+	cout << "\n\n============ invalid tiles" << endl;
+	cout << "Resource  col_start  col_end  row_start  row_end " << endl;
+	for(uint i=0; i<invalid_clb_tiles.size(); i++){
+		cout << std::left << std::setw (10);
+		cout << invalid_clb_tiles[i].name;
+		cout << std::setw (11) << invalid_clb_tiles[i].col_start;
+		cout << std::setw (9) << invalid_clb_tiles[i].col_end;
+		cout << std::setw (11) << invalid_clb_tiles[i].row_start;
+		cout << std::setw (9) << invalid_clb_tiles[i].row_end << endl;
+	}
+	for(uint i=0; i<invalid_bram18_tiles.size(); i++){
+		cout << std::left << std::setw (10);
+		cout << invalid_bram18_tiles[i].name;
+		cout << std::setw (11) << invalid_bram18_tiles[i].col_start;
+		cout << std::setw (9) << invalid_bram18_tiles[i].col_end;
+		cout << std::setw (11) << invalid_bram18_tiles[i].row_start;
+		cout << std::setw (9) << invalid_bram18_tiles[i].row_end << endl;
+	}
+	for(uint i=0; i<invalid_dsp2_tiles.size(); i++){
+		cout << std::left << std::setw (10);
+		cout << invalid_dsp2_tiles[i].name;
+		cout << std::setw (11) << invalid_dsp2_tiles[i].col_start;
+		cout << std::setw (9) << invalid_dsp2_tiles[i].col_end;
+		cout << std::setw (11) << invalid_dsp2_tiles[i].row_start;
+		cout << std::setw (9) << invalid_dsp2_tiles[i].row_end << endl;
+	}
+
+	cout << "============ invalid tiles\n\n" << endl;
+}
+
 void hipr::print_seq(void){
 	for(uint i=0; i<dfxs.size(); i++){ cout << dfxs[i].i << " "; }
 	cout << endl;
@@ -212,72 +266,38 @@ void hipr::floorplan(void){
 }
 
 void hipr::find_tile_range(dfx & op, bool debug){
-	tile_range out;
-	dfx still_need;
+	dfx op_still_need;
 	if(debug) cout << "\n======================" << op.name << endl;
-	out.start = op.start;
-	uint start_tile = op.start;
-	uint start_row  = op.row;
-	still_need = op;
-	int offset = 0;
-	while(still_need.lut > 0 || still_need.bram18>0 || still_need.dsp2>0){
+	op_still_need = op;
+	op_still_need.end = op_still_need.start;
 
-		if(debug) cout << offset << endl;
-		if(tiles[start_tile+offset].tile_l == "CLB")    { still_need.lut    -= num_per_tile.lut; }
-		if(tiles[start_tile+offset].tile_l == "BRAM18") { still_need.bram18 -= num_per_tile.bram18; }
-		if(tiles[start_tile+offset].tile_l == "DSP2")   { still_need.dsp2   -= num_per_tile.dsp2; }
-		if(tiles[start_tile+offset].tile_r == "CLB")    { still_need.lut    -= num_per_tile.lut; }
-		if(tiles[start_tile+offset].tile_r == "BRAM18") { still_need.bram18 -= num_per_tile.bram18; }
-		if(tiles[start_tile+offset].tile_r == "DSP2")   { still_need.dsp2   -= num_per_tile.dsp2; }
-		if(debug) cout << "clb=" << still_need.lut;
-		if(debug) cout << "bram2=" << still_need.bram18;
-		if(debug) cout << "dsp2=" << still_need.dsp2 << endl;
-		if(debug) cout << "start_tile=" << start_tile << " offset=" << offset << " start_tile+offset=" << start_tile+offset << endl;
-		offset++;
-
+	while(op_still_need.lut > 0 || op_still_need.bram18>0 || op_still_need.dsp2>0){
+		if(debug) cout << op_still_need.end << endl;
+		if(tiles[op_still_need.end].tile_l == "CLB")    { op_still_need.lut    -= num_per_tile.lut; }
+		if(tiles[op_still_need.end].tile_l == "BRAM18") { op_still_need.bram18 -= num_per_tile.bram18; }
+		if(tiles[op_still_need.end].tile_l == "DSP2")   { op_still_need.dsp2   -= num_per_tile.dsp2; }
+		if(tiles[op_still_need.end].tile_r == "CLB")    { op_still_need.lut    -= num_per_tile.lut; }
+		if(tiles[op_still_need.end].tile_r == "BRAM18") { op_still_need.bram18 -= num_per_tile.bram18; }
+		if(tiles[op_still_need.end].tile_r == "DSP2")   { op_still_need.dsp2   -= num_per_tile.dsp2; }
+		if(debug) cout << "clb=" << op_still_need.lut;
+		if(debug) cout << "bram2=" << op_still_need.bram18;
+		if(debug) cout << "dsp2=" << op_still_need.dsp2 << endl;
+		if(debug) cout << "start_tile=" << op_still_need.start << " end_tile=" << op_still_need.end << endl;
+		op_still_need.end++;
 		// if resources are all used, go to the upper row
-		if(start_tile+offset >= tiles.size()){
-			still_need = op; // reset the resources needed
-			offset = 0;
-			start_row++;
-			if(start_row == MAX_ROW){ start_row = 0; }
-			start_tile = 0;
+		if(op_still_need.end > ((int) tiles.size()-1)){
+			op_still_need = op; // reset the resources needed
+			op_still_need.row++;
+			if(op_still_need.row == MAX_ROW){ op_still_need.row = 0; }
+			op_still_need.start = 0;
+			op_still_need.end = 0;
 		}
 
-		// test for unusable area
-		// overlapping configuration area
-		if((start_row==0 || start_row==3) &&
-		   (( start_tile<=68 && 68<=start_tile+offset-1) || ( start_tile<=70 && 70<=start_tile+offset-1))
-		){
-			still_need = op; // reset the resources needed
-			offset = 0;
-			start_tile = 71;
-		}
-
-		// test for unusable area
-		// Overlapping with firmware area
-		if((start_row==2 || start_row==3) &&
-		   (( start_tile<=108 && 108<=start_tile+offset-1) || ( start_tile<=125 && 125<=start_tile+offset-1))
-		){
-			still_need = op;
-			offset = 0;
-			start_row++;
-			if(start_row == MAX_ROW){ start_row = 0; }
-			start_tile = 0;
-		}
 	}
 
-	out.row = start_row;
-	out.start = start_tile;
-	//deliberately include one more tiles to avoid partition reduce usable IPs
-	if(start_tile+offset == tiles.size()){
-		out.end = start_tile+offset-1; // decrease by 1 if it reaches the right boundary
-	}else{
-		out.end = start_tile+offset;
-	}
-	op.start = out.start;
-	op.end   = out.end;
-	op.row   = out.row;
+	op.start = op_still_need.start;
+	op.end   = op_still_need.end;
+	op.row   = op_still_need.row;
 }
 
 double hipr::return_total_dest(void){

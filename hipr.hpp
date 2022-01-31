@@ -6,12 +6,20 @@ public:
 	string          dfx_path;
 	string          connect_path;
 	string          tile_path;
+	string          invalid_tile_path;
 	string          xdc_path;
 	vector<connect> connects;
 	vector<pragma>  pragmas;
 	vector<tile>    tiles;
-	vector<dfx>      dfxs;
-	res_per_tile num_per_tile = {432, 22, 22};
+	vector<invalid_tile> invalid_clb_tiles;
+	vector<invalid_tile> invalid_bram18_tiles;
+	vector<invalid_tile> invalid_dsp2_tiles;
+	vector<dfx>     dfxs;
+	res_per_tile    num_per_tile = {432, 22, 22};
+	int             CLB_OFFSET;
+	int             BRAM36_OFFSET;
+	int             BRAM18_OFFSET;
+	int             DSP2_OFFSET;
 
 	hipr(string path_prefix, string device_name);
 
@@ -19,12 +27,14 @@ public:
 	void init_connect(void);
 	void init_tile(void);
 	void init_dfx(void);
+	void init_invalid(void);
 	void gen_xdc(void);
 
 	void print_connect(void);
 	void print_pragma(void);
 	void print_tile(void);
 	void print_dfx(void);
+	void print_invalid(void);
 
 	double return_total_dest(void);
 	double cost_function(bool debug=false);

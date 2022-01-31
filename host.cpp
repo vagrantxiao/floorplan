@@ -12,19 +12,15 @@ int main(int argc, char **argv){
 	}
 	else{
 		path_prefix = "./src/rendering";
-		device = "au50";
+		device = "zcu102";
 	}
 
 	// Instantiate a pr class;
 	hipr pr_inst(path_prefix, device);
 
-	pr_inst.init_pragma();
-	pr_inst.init_connect();
-	pr_inst.init_tile();
-	pr_inst.init_dfx();
-
 	pr_inst.SimulatedAnnealing();
 
+	pr_inst.print_invalid();
 	// pr_inst.print_connect();
 	// pr_inst.print_pragma();
 	// pr_inst.print_tile();

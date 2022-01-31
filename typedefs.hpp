@@ -67,4 +67,11 @@ struct res_range{ //
     int start, end;
 };
 
+typedef struct{ //
+	string name;
+	int col_start, col_end, row_start, row_end;
+}invalid_tile;
+
+
+
 #endif
