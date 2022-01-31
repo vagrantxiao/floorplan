@@ -13,7 +13,7 @@ public:
 	vector<dfx>      dfxs;
 	res_per_tile num_per_tile = {432, 22, 22};
 
-	hipr(string path_prefix);
+	hipr(string path_prefix, string device_name);
 
 	void init_pragma(void);
 	void init_connect(void);

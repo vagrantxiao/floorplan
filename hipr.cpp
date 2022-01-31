@@ -5,11 +5,11 @@ double e=1e-16,at=0.99999999,T=1;
 int L = TRIAL_NUM;
 
 
-hipr::hipr(string path_prefix){
+hipr::hipr(string path_prefix, string device_name){
 	pragma_path     = path_prefix + "/pragma.txt";
 	dfx_path        = path_prefix + "/dfx.txt";
 	connect_path    = path_prefix + "/connect.txt";
-	tile_path       = "./src/arch/au50.txt";
+	tile_path       = "./src/arch/"+device_name+".txt";
 	xdc_path        = path_prefix + "/sub.xdc";
 }
 

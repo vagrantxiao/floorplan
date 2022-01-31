@@ -16,7 +16,7 @@ using namespace std;
 
 #define W_VERTICAL   1000
 #define W_HORIZONTAL 1
-#define W_DEST       0.00014
+#define W_DEST       0.00001
 #define COST_REQ     1
 
 
@@ -24,7 +24,7 @@ using namespace std;
 extern double  e; //  e: termination temperature
 extern double at; // at: derivative of temperature
 extern double  T; //  T: initial temperature
-extern int     L; //  L: the maximum interation number
+extern int     L; //  L: the maximum iteration number
 
 typedef unsigned int uint;
 

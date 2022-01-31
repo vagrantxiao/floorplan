@@ -5,12 +5,18 @@
 int main(int argc, char **argv){
 
 	// Define the input data path;
-	string path_prefix;
-	if(argc>1) path_prefix = argv[1];
-	else       path_prefix = "./src/rendering";
+	string path_prefix, device;
+	if(argc>1){\
+		path_prefix = argv[1];
+		device = argv[2];
+	}
+	else{
+		path_prefix = "./src/rendering";
+		device = "au50";
+	}
 
 	// Instantiate a pr class;
-	hipr pr_inst(path_prefix);
+	hipr pr_inst(path_prefix, device);
 
 	pr_inst.init_pragma();
 	pr_inst.init_connect();
