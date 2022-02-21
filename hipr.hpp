@@ -8,7 +8,7 @@ public:
 	string          tile_path;
 	string          invalid_tile_path;
 	string          xdc_path;
-        string          xdc_inst;
+    string          xdc_inst;
 	vector<connect> connects;
 	vector<pragma>  pragmas;
 	vector<tile>    tiles;
@@ -33,8 +33,10 @@ public:
 	void print_pragma(void);
 	void print_tile(void);
 	void print_dfx(void);
+	void print_utilization(void);
 	void print_invalid(void);
 
+	void calc_resource(dfx dfx_in, int resource_num[3]);
 	double return_total_dest(void);
 	double cost_function(bool debug=false);
 	void find_tile_range(dfx & op, bool debug=false);

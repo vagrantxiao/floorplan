@@ -214,11 +214,31 @@ void hipr::print_tile(void){
 
 }
 
+void hipr::calc_resource(dfx dfx_in, int resource_num[3]){
+	int clbs_num = 0, bram18s_num = 0, dsps_num = 0;
+
+	for (int col = dfx_in.start; col <= dfx_in.end; col++){
+		if (tiles[col].tile_l == "CLB"){ clbs_num += num_per_tile.lut; }
+		if (tiles[col].tile_r == "CLB"){ clbs_num += num_per_tile.lut; }
+		if (tiles[col].tile_l == "BRAM18"){ bram18s_num += num_per_tile.bram18; }
+		if (tiles[col].tile_r == "BRAM18"){ bram18s_num += num_per_tile.bram18; }
+		if (tiles[col].tile_l == "DSP2"){ dsps_num += num_per_tile.dsp2; }
+		if (tiles[col].tile_r == "DSP2"){ dsps_num += num_per_tile.dsp2; }
+	}
+	resource_num[0] = clbs_num;
+	resource_num[1] = bram18s_num;
+	resource_num[2] = dsps_num;
+}
+
 void hipr::print_dfx(void){
 	cout << "\n\n============ dfx" << endl;
-	cout << "#: operator          Type   LUTs   FFs    BRAM18 DSP    row start end " << endl;
+	cout << "# : operator          Type   LUTs   FFs    BRAM18 DSP    row start end " << endl;
+	int resource_num[3];
 	for(uint i=0; i<dfxs.size(); i++){
-		cout << dfxs[i].i << ": " << std::left << std::setw (18);
+		this->hipr::calc_resource(dfxs[i], resource_num);
+
+		cout << std::setw (2) << dfxs[i].i;
+		cout << ": " << std::left << std::setw (18);
 		cout << dfxs[i].name;
 		cout << std::setw (7) << dfxs[i].type;
 		cout << std::setw (7) << dfxs[i].lut;
@@ -228,9 +248,57 @@ void hipr::print_dfx(void){
 		cout << std::setw (4) << dfxs[i].row;
 		cout << std::setw (6) << dfxs[i].start;
 		cout << std::setw (4) << dfxs[i].end << endl;
+		cout << std::setw (29) << " ";
+		cout << std::setw (7) << resource_num[0];
+		cout << std::setw (7) << " ";
+		cout << std::setw (7) << resource_num[1];
+		cout << std::setw (7) << resource_num[2] << endl;
 	}
 	cout << "============ end of dfx\n\n" << endl;
 }
+
+void hipr::print_utilization(void){
+	cout << "\n\n============ utilization" << endl;
+	int resource_num[3];
+	int app_num_total[3] = {0, 0, 0};
+	int resource_num_total[3] = {0, 0, 0};
+	cout << "# : operator          LUTs   BRAM18 DSP" << endl;
+	for(uint i=0; i<dfxs.size(); i++){
+		this->hipr::calc_resource(dfxs[i], resource_num);
+		cout << std::setw (2) << dfxs[i].i;
+		cout << ": " << std::left << std::setw (18);
+		cout << dfxs[i].name;
+		cout << std::setprecision(2);
+		cout << std::setw (7) << dfxs[i].lut / resource_num[0];
+		cout << std::setw (7) << dfxs[i].bram18 / resource_num[1];
+		cout << std::setw (7) << dfxs[i].dsp2 / resource_num[2] << endl;
+		app_num_total[0] += dfxs[i].lut;
+		app_num_total[1] += dfxs[i].bram18;
+		app_num_total[2] += dfxs[i].dsp2;
+		resource_num_total[0] += resource_num[0];
+		resource_num_total[1] += resource_num[1];
+		resource_num_total[2] += resource_num[2];
+	}
+
+	cout << std::setw (2) << "--";
+	cout << ": " << std::left << std::setw (18);
+	cout << "APP/Chip";
+	cout << std::setprecision(2);
+	cout << std::setw (7) << app_num_total[0] / 242864.0;
+	cout << std::setw (7) << app_num_total[1] / 1680.0;
+	cout << std::setw (7) << app_num_total[2] / 2160.0 << endl;
+
+	cout << std::setw (2) << "--";
+	cout << ": " << std::left << std::setw (18);
+	cout << "PR/Chip";
+	cout << std::setprecision(2);
+	cout << std::setw (7) << resource_num_total[0] / 242864.0;
+	cout << std::setw (7) << resource_num_total[1] / 1680.0;
+	cout << std::setw (7) << resource_num_total[2] / 2160.0 << endl;
+
+	cout << "============ end of utilization\n\n" << endl;
+}
+
 
 void hipr::print_invalid(void){
 	cout << "\n\n============ invalid tiles" << endl;

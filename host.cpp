@@ -24,8 +24,9 @@ int main(int argc, char **argv){
 	pr_inst.print_invalid();
 	// pr_inst.print_connect();
 	// pr_inst.print_pragma();
-	// pr_inst.print_tile();
+	pr_inst.print_tile();
 	pr_inst.print_dfx();
+	pr_inst.print_utilization();
 	pr_inst.gen_xdc();
 
 
