@@ -8,12 +8,11 @@ public:
 	string          tile_path;
 	string          invalid_tile_path;
 	string          xdc_path;
+        string          xdc_inst;
 	vector<connect> connects;
 	vector<pragma>  pragmas;
 	vector<tile>    tiles;
-	vector<invalid_tile> invalid_clb_tiles;
-	vector<invalid_tile> invalid_bram18_tiles;
-	vector<invalid_tile> invalid_dsp2_tiles;
+	vector<invalid_tile> invalid_tiles;
 	vector<dfx>     dfxs;
 	res_per_tile    num_per_tile = {432, 22, 22};
 	int             CLB_OFFSET;
@@ -21,7 +20,7 @@ public:
 	int             BRAM18_OFFSET;
 	int             DSP2_OFFSET;
 
-	hipr(string path_prefix, string device_name);
+	hipr(string path_prefix, string device_name, string inst_name);
 
 	void init_pragma(void);
 	void init_connect(void);

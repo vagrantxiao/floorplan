@@ -5,13 +5,15 @@ double e=1e-16,at=0.99999999,T=1;
 int L = TRIAL_NUM;
 
 
-hipr::hipr(string path_prefix, string device_name){
+hipr::hipr(string path_prefix, string device_name, string inst_name){
 	pragma_path       = path_prefix + "/pragma.txt";
 	dfx_path          = path_prefix + "/dfx.txt";
 	connect_path      = path_prefix + "/connect.txt";
 	tile_path         = "./src/arch/"+device_name+".txt";
 	invalid_tile_path = "./src/arch/"+device_name+"_invalid.txt";
-	xdc_path          = path_prefix + "/sub.xdc";
+	//xdc_path          = path_prefix + "/sub.xdc";
+	xdc_path          = "/home/ylxiao/quark/Downloads/sub.xdc";
+    xdc_inst          = inst_name;
 	this->init_pragma();
 	this->init_connect();
 	this->init_tile();
@@ -66,7 +68,7 @@ void hipr::init_dfx(void){
 	myfile.open(cstr);
 	int i=0;
 	dfx t;
-	while(myfile >> t.name >> t.lut >> t.ff >> t.bram18 >> t.dsp2){
+	while(myfile >> t.name >> t.type >> t.lut >> t.ff >> t.bram18 >> t.dsp2){
 		t.lut    *= pragmas[i].lut;
 		t.ff     *= pragmas[i].ff;
 		t.bram18 *= pragmas[i].bram18;
@@ -89,12 +91,18 @@ void hipr::init_invalid(void){
 
 	// reand in the CLB BRAM36 BRAM18 DSP2 Y-offset for xdc generation
 	myfile >> t.name >> CLB_OFFSET >> BRAM36_OFFSET >> BRAM18_OFFSET >> DSP2_OFFSET;
-
+	if(t.name != "OFFSET_CLB_BRAM36_BRAM18_DSP2"){
+		cout << "The first row of " << invalid_tile_path << " should be \"OFFSET_CLB_BRAM36_BRAM18_DSP2\"!" << endl;
+		exit(FAILURE);
+	}
 	// reand in the invalid tiles
 	while(myfile >> t.name >> t.col_start >> t.col_end >> t.row_start >> t.row_end){
-		if(t.name == "CLB")    invalid_clb_tiles.push_back(t);
-		if(t.name == "BRAM18") invalid_bram18_tiles.push_back(t);
-		if(t.name == "DSP2")   invalid_dsp2_tiles.push_back(t);
+		if(t.name == "INVALID_TILE"){
+			invalid_tiles.push_back(t);
+		}else{
+			cout << "The format from the second row of " << invalid_tile_path << " should be \"INVALID_TILE\"!" << endl;
+			exit(FAILURE);
+		}
 	}
 	myfile.close();
 }
@@ -125,47 +133,47 @@ void hipr::gen_xdc(void){
 		out = find_resource_range("CLB", dfxs[i].start, dfxs[i].end);
 		if (out.valid){
 			myfile << "resize_pblock [get_pblocks " << dfxs[i].name << "] -add {SLICE_X";
-			myfile << out.start << "Y" << 65+dfxs[i].row*60 << ":SLICE_X" << out.end << "Y" << this->CLB_OFFSET+dfxs[i].row*60 << "}" << endl;
+			myfile << out.start << "Y" << CLB_OFFSET+dfxs[i].row*60 << ":SLICE_X" << out.end << "Y" << (this->dfxs[i].row+1)*60-1 << "}" << endl;
 		}
 
 		out = find_resource_range("EMPTY_CLB", dfxs[i].start, dfxs[i].end);
 		if (out.valid){
 			myfile << "resize_pblock [get_pblocks " << dfxs[i].name << "] -add {SLICE_X";
-			myfile << out.start << "Y" << 65+dfxs[i].row*60 << ":SLICE_X" << out.end << "Y" << this->CLB_OFFSET+dfxs[i].row*60 << "}" << endl;
+			myfile << out.start << "Y" << CLB_OFFSET+dfxs[i].row*60 << ":SLICE_X" << out.end << "Y" << (this->CLB_OFFSET+dfxs[i].row+1)*60-1 << "}" << endl;
 		}
 
 		out = find_resource_range("DSP2", dfxs[i].start, dfxs[i].end);
 		if (out.valid){
 			myfile << "resize_pblock [get_pblocks " << dfxs[i].name << "] -add {DSP48E2_X";
-			myfile << out.start << "Y" << 20+dfxs[i].row*24 << ":DSP48E2_X" << out.end << "Y" << this->DSP2_OFFSET+dfxs[i].row*24 << "}" << endl;
+			myfile << out.start << "Y" << DSP2_OFFSET+dfxs[i].row*24 << ":DSP48E2_X" << out.end << "Y" << (this->dfxs[i].row+1)*24-1 << "}" << endl;
 		}
 
 		out = find_resource_range("EMPTY_DSP2", dfxs[i].start, dfxs[i].end);
 		if (out.valid){
 			myfile << "resize_pblock [get_pblocks " << dfxs[i].name << "] -add {DSP48E2_X";
-			myfile << out.start << "Y" << 20+dfxs[i].row*24 << ":DSP48E2_X" << out.end << "Y" << this->DSP2_OFFSET+dfxs[i].row*24 << "}" << endl;
+			myfile << out.start << "Y" << DSP2_OFFSET+dfxs[i].row*24 << ":DSP48E2_X" << out.end << "Y" << (this->DSP2_OFFSET+dfxs[i].row+1)*24-1 << "}" << endl;
 		}
 
 
 		out = find_resource_range("BRAM18", dfxs[i].start, dfxs[i].end);
 		if (out.valid) {
 			myfile << "resize_pblock [get_pblocks " << dfxs[i].name << "] -add {RAMB18_X";
-			myfile << out.start << "Y" << 26+dfxs[i].row*24 << ":RAMB18_X" << out.end << "Y" << this->BRAM18_OFFSET+dfxs[i].row*24 << "}" << endl;
+			myfile << out.start << "Y" << BRAM18_OFFSET+dfxs[i].row*24 << ":RAMB18_X" << out.end << "Y" << (this->dfxs[i].row+1)*24-1 << "}" << endl;
 			myfile << "resize_pblock [get_pblocks " << dfxs[i].name << "] -add {RAMB36_X";
-			myfile << out.start << "Y" << 13+dfxs[i].row*12 << ":RAMB36_X" << out.end << "Y" << this->BRAM36_OFFSET+dfxs[i].row*12 << "}" << endl;
+			myfile << out.start << "Y" << BRAM36_OFFSET+dfxs[i].row*12 << ":RAMB36_X" << out.end << "Y" << (this->dfxs[i].row+1)*12-1 << "}" << endl;
 		}
 
 		out = find_resource_range("EMPTY_BRAM18", dfxs[i].start, dfxs[i].end);
 		if (out.valid) {
 			myfile << "resize_pblock [get_pblocks " << dfxs[i].name << "] -add {RAMB18_X";
-			myfile << out.start << "Y" << 26+dfxs[i].row*24 << ":RAMB18_X" << out.end << "Y" << this->BRAM18_OFFSET+dfxs[i].row*24 << "}" << endl;
+			myfile << out.start << "Y" << BRAM18_OFFSET+dfxs[i].row*24 << ":RAMB18_X" << out.end << "Y" << (this->dfxs[i].row+1)*24-1 << "}" << endl;
 			myfile << "resize_pblock [get_pblocks " << dfxs[i].name << "] -add {RAMB36_X";
-			myfile << out.start << "Y" << 13+dfxs[i].row*12 << ":RAMB36_X" << out.end << "Y" << this->BRAM36_OFFSET+dfxs[i].row*12 << "}" << endl;
+			myfile << out.start << "Y" << BRAM36_OFFSET+dfxs[i].row*12 << ":RAMB36_X" << out.end << "Y" << (this->dfxs[i].row+1)*12-1 << "}" << endl;
 		}
 		myfile << "set_property SNAPPING_MODE ON [get_pblocks " << dfxs[i].name << "]" << endl;
 		myfile << "set_property IS_SOFT TRUE [get_pblocks " << dfxs[i].name << "]" << endl;
 		myfile << "add_cells_to_pblock [get_pblocks " << dfxs[i].name;
-		myfile << "] [get_cells -quiet [list level0_i/ulp/ydma_1/mono_inst/" << dfxs[i].name << "_inst]]" << endl;
+		myfile << "] [get_cells -quiet [list " << this->xdc_inst << "/ydma_1/mono_inst/" << dfxs[i].name << "_inst]]" << endl;
 	}
 	myfile.close();
 }
@@ -208,10 +216,11 @@ void hipr::print_tile(void){
 
 void hipr::print_dfx(void){
 	cout << "\n\n============ dfx" << endl;
-	cout << "#: operator          LUTs   FFs    BRAM18 DSP    row start end " << endl;
+	cout << "#: operator          Type   LUTs   FFs    BRAM18 DSP    row start end " << endl;
 	for(uint i=0; i<dfxs.size(); i++){
 		cout << dfxs[i].i << ": " << std::left << std::setw (18);
 		cout << dfxs[i].name;
+		cout << std::setw (7) << dfxs[i].type;
 		cout << std::setw (7) << dfxs[i].lut;
 		cout << std::setw (7) << dfxs[i].ff;
 		cout << std::setw (7) << dfxs[i].bram18;
@@ -226,30 +235,15 @@ void hipr::print_dfx(void){
 void hipr::print_invalid(void){
 	cout << "\n\n============ invalid tiles" << endl;
 	cout << "Resource  col_start  col_end  row_start  row_end " << endl;
-	for(uint i=0; i<invalid_clb_tiles.size(); i++){
+	for(uint i=0; i<invalid_tiles.size(); i++){
 		cout << std::left << std::setw (10);
-		cout << invalid_clb_tiles[i].name;
-		cout << std::setw (11) << invalid_clb_tiles[i].col_start;
-		cout << std::setw (9) << invalid_clb_tiles[i].col_end;
-		cout << std::setw (11) << invalid_clb_tiles[i].row_start;
-		cout << std::setw (9) << invalid_clb_tiles[i].row_end << endl;
+		cout << invalid_tiles[i].name;
+		cout << std::setw (11) << invalid_tiles[i].col_start;
+		cout << std::setw (9) << invalid_tiles[i].col_end;
+		cout << std::setw (11) << invalid_tiles[i].row_start;
+		cout << std::setw (9) << invalid_tiles[i].row_end << endl;
 	}
-	for(uint i=0; i<invalid_bram18_tiles.size(); i++){
-		cout << std::left << std::setw (10);
-		cout << invalid_bram18_tiles[i].name;
-		cout << std::setw (11) << invalid_bram18_tiles[i].col_start;
-		cout << std::setw (9) << invalid_bram18_tiles[i].col_end;
-		cout << std::setw (11) << invalid_bram18_tiles[i].row_start;
-		cout << std::setw (9) << invalid_bram18_tiles[i].row_end << endl;
-	}
-	for(uint i=0; i<invalid_dsp2_tiles.size(); i++){
-		cout << std::left << std::setw (10);
-		cout << invalid_dsp2_tiles[i].name;
-		cout << std::setw (11) << invalid_dsp2_tiles[i].col_start;
-		cout << std::setw (9) << invalid_dsp2_tiles[i].col_end;
-		cout << std::setw (11) << invalid_dsp2_tiles[i].row_start;
-		cout << std::setw (9) << invalid_dsp2_tiles[i].row_end << endl;
-	}
+
 
 	cout << "============ invalid tiles\n\n" << endl;
 }
@@ -340,41 +334,58 @@ double hipr::return_total_dest(void){
 double hipr::cost_function(bool debug){
 	double cost = 0;
 	vector <double> cost_table[7];
-	for (int i=0; i<7; i++){
-		for (uint j=0; j<tiles.size(); j++){
-			cost_table[i].push_back(0);
+
+	// initialize the cost table to -1 as it can be used once.
+	for (int row=0; row<7; row++){
+		for (uint col=0; col<tiles.size(); col++){
+			cost_table[row].push_back(-1);
 		}
 	}
 
+	// increase the cost table for that file if it is used by some p-block
 	for(uint i=0; i<dfxs.size(); i++){
-		for(int j=dfxs[i].start; j<dfxs[i].end+1; j++){
-			cost_table[dfxs[i].row][j]++;
+		for(int j=dfxs[i].start; j<dfxs[i].end+2; j++){
+			if (j != (int) tiles.size()) cost_table[dfxs[i].row][j]++;
 		}
 	}
 
 
 	// test for overlapping
 	int overlap = 0;
-	for(int i=0; i<7; i++){
-		for(uint j=0; j<tiles.size(); j++){
-			if(cost_table[i][j] > 1){
-				overlap = overlap + cost_table[i][j] - 1;
+	for(int row=0; row<7; row++){
+		for(uint col=0; col<tiles.size(); col++){
+			//cout << cost_table[row][col] << ",";
+			if(cost_table[row][col] > 0){
+				overlap = overlap + cost_table[row][col];
 			}
 		}
+		//cout << endl;
 	}
+
+	if(debug) cout << "overlap_area=" << overlap << endl;
 
 	// test for unusable areas
 	int invalid_area = 0;
-	for(int i=0; i<7; i++){
-		for(uint j=0; j<tiles.size(); j++){
-			// configuration area overlap violation
-			if((i==0 || i==3)&&(j>=68 && j<=70)) { if(cost_table[i][j] > 0) { invalid_area++; } }
-			// firmware overlap violation
-			if((i==2 || i==3)&&(j>=108 && j<=125)) { if(cost_table[i][j] > 0) { invalid_area++; } }
+
+	for(uint i=0; i<dfxs.size(); i++){
+		for(unsigned int invld_idx = 0; invld_idx < invalid_tiles.size(); invld_idx++){
+			if(dfxs[i].row <= invalid_tiles[invld_idx].row_end &&
+			   dfxs[i].row >= invalid_tiles[invld_idx].row_start){
+			   if((dfxs[i].start >= invalid_tiles[invld_idx].col_start &&
+				  dfxs[i].start <= invalid_tiles[invld_idx].col_end) ||
+				 (dfxs[i].end >= invalid_tiles[invld_idx].col_start &&
+				  dfxs[i].end <= invalid_tiles[invld_idx].col_end) ||
+				 (dfxs[i].end >= invalid_tiles[invld_idx].col_end &&
+				  dfxs[i].start <= invalid_tiles[invld_idx].col_start) ){
+				   invalid_area++;
+			   }
+			}
 		}
+
 	}
 
-	if(debug) cout << "invalid_area=" << invalid_area << endl;
+
+	cout << "invalid_area=" << invalid_area << endl;
 
 
 

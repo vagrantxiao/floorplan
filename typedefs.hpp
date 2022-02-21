@@ -12,11 +12,11 @@ using namespace std;
 #define TRIAL_NUM 2000000
 #define MAX_ROW   7
 #define SUCCESS   0
-#define FAIL      1
+#define FAILURE   1
 
 #define W_VERTICAL   1000
 #define W_HORIZONTAL 1
-#define W_DEST       0.00001
+#define W_DEST       0.000002
 #define COST_REQ     1
 
 
@@ -48,13 +48,14 @@ typedef struct{ //tiles
 
 struct dfx{ //
     string name;
+    string type;
     double lut, ff, bram18, dsp2;
     int row, start, end;
     int i;  //
 };
 
 typedef struct{ //
-	int row;
+    int row;
     double start, end;
 }tile_range;
 

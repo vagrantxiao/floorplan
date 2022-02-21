@@ -5,18 +5,19 @@
 int main(int argc, char **argv){
 
 	// Define the input data path;
-	string path_prefix, device;
+	string path_prefix, device, inst_name;
 	if(argc>1){\
 		path_prefix = argv[1];
 		device = argv[2];
 	}
 	else{
-		path_prefix = "./src/rendering";
+		path_prefix = "./src/app";
 		device = "zcu102";
+         inst_name = "pfm_top_i/dynamic_region";
 	}
 
 	// Instantiate a pr class;
-	hipr pr_inst(path_prefix, device);
+	hipr pr_inst(path_prefix, device, inst_name);
 
 	pr_inst.SimulatedAnnealing();
 
